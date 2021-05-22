@@ -101,14 +101,14 @@ runcmd(struct cmd *cmd)
     pcmd = (struct pipecmd*)cmd;
     if(pipe(p) < 0)
       panic("pipe");
-    if(fork1() == 0){
+    if(fork1() == 0){   //left write to tube
       close(1);
       dup(p[1]);
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->left);
     }
-    if(fork1() == 0){
+    if(fork1() == 0){  //then right get from tube
       close(0);
       dup(p[0]);
       close(p[0]);
@@ -220,7 +220,7 @@ redircmd(struct cmd *subcmd, char *file, char *efile, int mode, int fd)
 }
 
 struct cmd*
-pipecmd(struct cmd *left, struct cmd *right)
+pipecmd(struct cmd *left, struct cmd *right) //会用到这里的成员变量left、right
 {
   struct pipecmd *cmd;
 
@@ -308,7 +308,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
 }
 
 int
-peek(char **ps, char *es, char *toks)
+peek(char **ps, char *es, char *toks) // filter space and tab and judge if *s == toks
 {
   char *s;
 
@@ -331,7 +331,7 @@ parsecmd(char *s)
   struct cmd *cmd;
 
   es = s + strlen(s);
-  cmd = parseline(&s, es);
+  cmd = parseline(&s, es);    //parsecmd->parseline->parsepipe
   peek(&s, es, "");
   if(s != es){
     fprintf(2, "leftovers: %s\n", s);
