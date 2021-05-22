@@ -114,7 +114,7 @@ runcmd(struct cmd *cmd)
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->right);
-    }
+    }//子进程只有在fork()的时候会区别于父进程，分开之后就不存在父子关系了，但是可以getpid()来获得不同的pid
     close(p[0]);
     close(p[1]);
     wait(0);

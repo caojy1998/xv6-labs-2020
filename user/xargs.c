@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 #endif // XZL_DBG
 
         int xstate;
-        int childpid = wait(&xstate);
+        int childpid = wait(&xstate); //wait收集到的返回值是子程序返回的结果，然后如果有一系列的子程序要等待，就需要多个wait来控制，for语句也可。但是这些子程序内部不是原子操作，所以可能会穿插着执行
         (void)childpid;
 
 #ifdef XZL_DBG
