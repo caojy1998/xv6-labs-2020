@@ -99,7 +99,7 @@ runcmd(struct cmd *cmd)
 
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
-    if(pipe(p) < 0)
+    if(pipe(p) < 0)  //每个pipe()会创建一个pipe，但是每个pipe可以有多个读fd和写fd
       panic("pipe");
     if(fork1() == 0){   //left write to tube
       close(1);

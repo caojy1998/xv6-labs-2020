@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 {
     char buf[MAXPATH];
     char *args[argc+1];
-    memcpy(args, argv + 1, sizeof(argv[0]) * (argc - 1));
+    memcpy(args, argv + 1, sizeof(argv[0]) * (argc - 1));  //就是一个数组拷贝工作
     args[argc - 1] = buf;
     args[argc] = 0;
     for (int i = 0; i <= argc; ++i)
