@@ -83,6 +83,7 @@ struct trapframe {
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
+#define MASK_SIZE 24
 struct proc {
   struct spinlock lock;
 
@@ -93,6 +94,7 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
+  char mask[MASK_SIZE];                    //为了trace加的
 
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Virtual address of kernel stack

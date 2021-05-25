@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -279,6 +280,12 @@ fork(void)
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
+  
+  // 复制mask过去,好像for语句还是不行
+  //for (int i=0;i<=22;i++){
+    //p->mask[i]=np->mask[i];
+  //}
+  safestrcpy(np->mask,p->mask,sizeof(p->mask));
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
@@ -693,3 +700,22 @@ procdump(void)
     printf("\n");
   }
 }
+
+//计算number of processes
+
+int numberofprocesses(void){
+  struct proc *p;
+  uint64 num=0;
+  for(p=proc;p<&proc[NPROC];p++){
+    if (p->state != UNUSED){
+      num++;
+    }
+  }
+  return num;
+}
+
+
+
+
+
+
