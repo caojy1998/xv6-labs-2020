@@ -141,11 +141,15 @@ syscall(void)
     char *syscall_names[]={"fork","exit","wait","pipe","read","kill","exec","fstat","chdir","dup","getpid","sbrk","sleep","uptime","open","write","mknod","unlink","link","mkdir","close","trace","sysinfo"};
 
   num = p->trapframe->a7;
+  int temp=1;
+  for (int j=0;j<num;j++){
+    temp=temp*2;
+  }
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
-    if (p->mask[num]=='1'){
+    if ((p->mask & temp) == temp){
       printf("%d: syscall %s -> %d\n", p->pid, syscall_names[num-1], p->trapframe->a0);
-    }
+      }
   } 
   else {
     printf("%d %s: unknown sys call %d\n",
@@ -154,10 +158,12 @@ syscall(void)
   }
   // 加上打印trace的部分,下面这个好像不太行?
 
-  //for (int i=1;i<=22;i++){
-    //if (p->mask[i]=='1'){
-      //printf("%d: syscall %s -> %d\n", p->pid, syscall_names[i-1], p->trapframe->a0);
+  //for (int i=1;i<=23;i++){
+    //if ((p->mask & temp) == temp){
+      //printf("%d: syscall %s -> %d\n", p->pid, syscall_names[count], p->trapframe->a0);
     //}
+      //temp=temp*2;
+      //count++;
   //}
   
 }

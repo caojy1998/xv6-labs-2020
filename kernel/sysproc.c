@@ -106,17 +106,7 @@ sys_trace(void)
   if(argint(0, &n) < 0)
     return -1;
   struct proc *proc1=myproc();
-  int temp=n,i=0;
-  while(i<=23){
-    if (temp%2==0){
-      proc1->mask[i]='0';
-    }
-    else{
-      proc1->mask[i]='1';
-    }
-    i++;
-    temp=temp/2;
-  }
+  proc1->mask=n;
   return 0;
 
 }

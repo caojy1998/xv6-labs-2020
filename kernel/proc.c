@@ -281,11 +281,13 @@ fork(void)
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
   
-  // 复制mask过去,好像for语句还是不行
+  // 复制mask过去,好像for语句also ok
   //for (int i=0;i<=22;i++){
-    //p->mask[i]=np->mask[i];
+  //  np->mask[i]=p->mask[i];
   //}
-  safestrcpy(np->mask,p->mask,sizeof(p->mask));
+  //safestrcpy(np->mask,p->mask,sizeof(p->mask));
+  
+  np->mask=p->mask;
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
