@@ -5,6 +5,12 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fs.h"
+#include "elf.h"
+
+
+
+
 
 struct cpu cpus[NCPU];
 
@@ -20,6 +26,7 @@ static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
+extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 // initialize the proc table at boot time.
 void
@@ -41,7 +48,7 @@ procinit(void)
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
   }
-  kvminithart();
+  //kvminithart();
 }
 
 // Must be called with interrupts disabled,
@@ -107,6 +114,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
 
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     release(&p->lock);
@@ -120,6 +128,8 @@ found:
     release(&p->lock);
     return 0;
   }
+  //额外加上去的一张kernel表
+  p->kernel_pagetable = kvmcreate();
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -139,8 +149,16 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+  
+  //额外去掉p的kernel_table  
+  
+  if(p->kernel_pagetable) 
+    kvmfree(p->kernel_pagetable, p->sz);
+  p->kernel_pagetable = 0;
+  
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -195,6 +213,23 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmfree(pagetable, sz);
 }
 
+void proc_free_kernel_pagetable(uint64 kstack, pagetable_t pagetable, uint64 sz){
+  uvmunmap(pagetable, UART0, 1, 0);
+  uvmunmap(pagetable, VIRTIO0, 1, 0);
+  uvmunmap(pagetable, PLIC, 0x400000/PGSIZE, 0);
+  uvmunmap(pagetable, KERNBASE, ((uint64)etext-KERNBASE)/PGSIZE, 0);
+  uvmunmap(pagetable, (uint64)etext, (PHYSTOP-(uint64)etext)/PGSIZE, 0);
+  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  //uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 0);
+
+
+  
+  uvmfree2(pagetable, kstack, 1);
+}
+
+
+
+
 // a user program that calls exec("/init")
 // od -t xC initcode
 uchar initcode[] = {
@@ -229,7 +264,11 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-
+  
+  //加的
+  
+  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0);
+  
   release(&p->lock);
 }
 
@@ -249,6 +288,9 @@ growproc(int n)
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
+  //加的
+  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, sz, p->sz);
+  
   p->sz = sz;
   return 0;
 }
@@ -273,6 +315,11 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  
+  //猜想这边需要将进程页表的信息拷贝到内核页表
+  
+  kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
+  
   np->sz = p->sz;
 
   np->parent = p;
@@ -471,13 +518,21 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        
         p->state = RUNNING;
         c->proc = p;
+        
+        w_satp(MAKE_SATP(p->kernel_pagetable)); //读一下p的kernel_table
+        sfence_vma();
+        
         swtch(&c->context, &p->context);
+        
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+        
+        kvminithart();  //switch回来
 
         found = 1;
       }
@@ -697,3 +752,12 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+
+
+
+
+
+
+
