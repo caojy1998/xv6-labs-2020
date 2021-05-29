@@ -352,7 +352,6 @@ fork(void)
   
   //猜想这边需要将进程页表的信息拷贝到内核页表
   
-  kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
   
   /*pte_t *pte,*kernelpte;
   for (int j=0;j<p->sz;j+=PGSIZE){
@@ -382,6 +381,10 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
+  
+  //猜想这边需要将进程页表的信息拷贝到内核页表
+  
+  kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
 
   release(&np->lock);
 
