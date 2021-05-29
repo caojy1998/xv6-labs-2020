@@ -327,7 +327,7 @@ void uvmfree2(pagetable_t pagetable, uint64 va, uint npages){
   if (npages>0){
     uvmunmap(pagetable, va, npages, 1);
   }
-  freewalk(pagetable);
+  //freewalk(pagetable);
 }
 
 

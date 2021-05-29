@@ -235,10 +235,9 @@ void proc_free_kernel_pagetable(uint64 kstack, pagetable_t pagetable, uint64 sz)
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);*/
   //uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 0);
   
-  //myfreewalk(pagetable);
-  
-  
   uvmfree2(pagetable, kstack, 1);
+  
+  myfreewalk(pagetable);
 }
 
 void
