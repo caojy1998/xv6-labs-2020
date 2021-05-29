@@ -294,7 +294,14 @@ userinit(void)
   
   //加的
   
-  //kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0);
+  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0);
+  /*pte_t *pte,*kernelpte;
+  for (int j=0;j<p->sz;j+=PGSIZE){
+    pte=walk(p->pagetable, j, 0);
+    kernelpte=walk(p->kernel_pagetable, j, 1);
+    *kernelpte = (*pte) & PTE_U;
+  }*/
+  
   
   release(&p->lock);
 }
@@ -316,7 +323,7 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   //加的
-  //kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, sz, p->sz);
+  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, sz, p->sz);
   
   p->sz = sz;
   return 0;
@@ -345,7 +352,14 @@ fork(void)
   
   //猜想这边需要将进程页表的信息拷贝到内核页表
   
-  //kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
+  kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
+  
+  /*pte_t *pte,*kernelpte;
+  for (int j=0;j<p->sz;j+=PGSIZE){
+    pte=walk(np->pagetable, j, 0);
+    kernelpte=walk(np->kernel_pagetable, j, 1);
+    *kernelpte = (*pte) & PTE_U;
+  }*/
   
   np->sz = p->sz;
 

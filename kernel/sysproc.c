@@ -46,13 +46,14 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  struct proc *p = myproc();
-  addr = p->sz;                                     
+  
+  addr = myproc()->sz;                                     
   
   if(growproc(n) < 0)
     return -1;
-  /*if (n>0){
-    pte_t *pte, *kernelpte;
+  
+  /*pte_t *pte, *kernelpte;
+  if (n>0){    
     for (int j=addr;j<addr+n;j+=PGSIZE){                    //这边应该都是虚拟地址，所以sz（addr）既代表大小又代表最终位置
       pte = walk(p->pagetable, j ,0);
       kernelpte = walk(p->kernel_pagetable, j, 1);
@@ -62,8 +63,7 @@ sys_sbrk(void)
   else{
     for (int j=addr-PGSIZE;j>=addr+n;j-=PGSIZE){
       uvmunmap(p->kernel_pagetable, j, 1, 0);
-    }
-  }*/    
+    }*/  
   
   return addr;
 }
