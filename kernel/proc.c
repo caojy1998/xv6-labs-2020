@@ -227,20 +227,35 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 void proc_free_kernel_pagetable(uint64 kstack, pagetable_t pagetable, uint64 sz){
-  uvmunmap(pagetable, UART0, 1, 0);
+  /*uvmunmap(pagetable, UART0, 1, 0);
   uvmunmap(pagetable, VIRTIO0, 1, 0);
   uvmunmap(pagetable, PLIC, 0x400000/PGSIZE, 0);
   uvmunmap(pagetable, KERNBASE, ((uint64)etext-KERNBASE)/PGSIZE, 0);
   uvmunmap(pagetable, (uint64)etext, (PHYSTOP-(uint64)etext)/PGSIZE, 0);
-  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  uvmunmap(pagetable, TRAMPOLINE, 1, 0);*/
   //uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 0);
-
-
+  
+  //myfreewalk(pagetable);
+  
   
   uvmfree2(pagetable, kstack, 1);
 }
 
-
+void
+myfreewalk(pagetable_t pagetable)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      myfreewalk((pagetable_t)child);
+      pagetable[i] = 0;
+    }
+  }
+  kfree((void*)pagetable);
+}
 
 
 // a user program that calls exec("/init")
