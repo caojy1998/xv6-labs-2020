@@ -41,14 +41,14 @@ procinit(void)
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
-      char *pa = kalloc();
+      /*char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
+      p->kstack = va;*/
   }
-  //kvminithart();
+  kvminithart();
 }
 
 // Must be called with interrupts disabled,
@@ -129,7 +129,16 @@ found:
     return 0;
   }
   //额外加上去的一张kernel表
-  p->kernel_pagetable = kvmcreate();
+  p->kernel_pagetable = kvmmake();
+  
+  char *pa = kalloc();
+  if(pa == 0)
+     panic("kalloc");
+   uint64 va = KSTACK(0);  //KSTACK(0)
+   //kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+   mappages(p->kernel_pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W);
+   p->kstack = va;
+  
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -152,8 +161,12 @@ freeproc(struct proc *p)
   
   //额外去掉p的kernel_table  
   
-  if(p->kernel_pagetable) 
-    kvmfree(p->kernel_pagetable, p->sz);
+  if(p->kernel_pagetable) {
+    /*if (p->kstack) {
+      uvmunmap(p->kernel_pagetable, p->kstack, 1, 1);
+    }*/
+    proc_free_kernel_pagetable(p->kstack, p->kernel_pagetable, p->sz);
+  }
   p->kernel_pagetable = 0;
   
   if(p->pagetable)
@@ -267,7 +280,7 @@ userinit(void)
   
   //加的
   
-  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0);
+  //kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0);
   
   release(&p->lock);
 }
@@ -289,7 +302,7 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   //加的
-  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, sz, p->sz);
+  //kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, sz, p->sz);
   
   p->sz = sz;
   return 0;
@@ -318,7 +331,7 @@ fork(void)
   
   //猜想这边需要将进程页表的信息拷贝到内核页表
   
-  kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
+  //kvmmapuser(np->pid, np->kernel_pagetable, np->pagetable, np->sz, 0);
   
   np->sz = p->sz;
 

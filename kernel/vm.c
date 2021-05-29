@@ -154,7 +154,7 @@ kvmpa(uint64 va)
   
 
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(myproc()->kernel_pagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -413,7 +413,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  /*uint64 n, va0, pa0;
+  uint64 n, va0, pa0;
 
   while(len > 0){                       //这边是replace的工作
     va0 = PGROUNDDOWN(srcva);
@@ -430,8 +430,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   
-  return 0;*/
-  return copyin_new(pagetable, dst, srcva, len);
+  return 0;
+  //return copyin_new(pagetable, dst, srcva, len);
   
 }
 
@@ -442,7 +442,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
-  /*uint64 n, va0, pa0;
+  uint64 n, va0, pa0;
   int got_null = 0;
 
   while(got_null == 0 && max > 0){
@@ -475,10 +475,10 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return 0;
   } else {  
     return -1;
-  }*/
+  }
   
   
-  return copyinstr_new(pagetable, dst, srcva, max);
+  //return copyinstr_new(pagetable, dst, srcva, max);
 }
 
 
@@ -545,10 +545,9 @@ pagetable_t
 kvmcreate() 
 {
   pagetable_t pagetable;
-  int i;
 
   pagetable = uvmcreate();
-  for(i = 1; i < 512; i++) {
+  for(int i = 1; i < 512; i++) {
     pagetable[i] = kernel_pagetable[i];
   }
 
@@ -559,10 +558,20 @@ kvmcreate()
   kvmmapkern(pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // CLINT
-  kvmmapkern(pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  //kvmmapkern(pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
   // PLIC
   kvmmapkern(pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  
+  // map kernel text executable and read-only.
+  kvmmapkern(kernel_pagetable, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmapkern(kernel_pagetable, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmapkern(kernel_pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X);
 
   return pagetable;
 }

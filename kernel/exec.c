@@ -133,7 +133,7 @@ exec(char *path, char **argv)
     vmprint(p->pagetable);  //加的用于测试
   }
   
-  kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0); //加的
+  //kvmmapuser(p->pid, p->kernel_pagetable, p->pagetable, p->sz, 0); //加的
   
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
