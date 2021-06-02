@@ -126,6 +126,15 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
+  
+  //作业，初始化ticks
+  //p->ticks = 0;
+  p->allowin = 1;
+  //p->interval = 0;
+  /*if ((p->trapframesave = (struct trapframe *)kalloc())==0){
+    release(&p->lock);
+    return 0;
+  }*/
 
   return p;
 }
@@ -138,9 +147,12 @@ freeproc(struct proc *p)
 {
   if(p->trapframe)
     kfree((void*)p->trapframe);
+  if(p->trapframesave)
+    kfree((void*)p->trapframesave);
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -697,3 +709,6 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+

@@ -50,7 +50,7 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
+  if(r_scause() == 8){    
     // system call
 
     if(p->killed)
@@ -65,8 +65,17 @@ usertrap(void)
     intr_on();
 
     syscall();
+    
   } else if((which_dev = devintr()) != 0){
     // ok
+    /*if (which_dev == 2){
+      p->ticks += 1;
+      if (p->ticks == p->interval){
+        switchtrapframe(p->trapframesave, p->trapframe);
+        p->ticks = 0;
+        p->trapframe->epc = (uint64)p->handler;
+      }
+    }*/
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -77,8 +86,53 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  
+  
+  if(which_dev == 2){
+   //作业
+    p->ticks += 1;
+    
+    if ((p->ticks == p->interval) && p->allowin ){
+      p->allowin = 0;
+      p->saved_epc = p->trapframe->epc; //      
+      
+      p->saved_ra = p->trapframe->ra;
+      p->saved_sp = p->trapframe->sp;
+      p->saved_gp = p->trapframe->gp;
+      p->saved_tp = p->trapframe->tp;
+      p->saved_t0 = p->trapframe->t0;
+      p->saved_t1 = p->trapframe->t1;
+      p->saved_t2 = p->trapframe->t2;
+      p->saved_t3 = p->trapframe->t3;
+      p->saved_t4 = p->trapframe->t4;
+      p->saved_t5 = p->trapframe->t5;
+      p->saved_t6 = p->trapframe->t6;
+      p->saved_a0 = p->trapframe->a0;
+      p->saved_a1 = p->trapframe->a1;
+      p->saved_a2 = p->trapframe->a2;
+      p->saved_a3 = p->trapframe->a3;
+      p->saved_a4 = p->trapframe->a4;
+      p->saved_a5 = p->trapframe->a5;
+      p->saved_a6 = p->trapframe->a6;
+      p->saved_a7 = p->trapframe->a7;
+      p->saved_s0 = p->trapframe->s0;
+      p->saved_s1 = p->trapframe->s1;
+      p->saved_s2 = p->trapframe->s2;
+      p->saved_s3 = p->trapframe->s3;
+      p->saved_s4 = p->trapframe->s4;
+      p->saved_s5 = p->trapframe->s5;
+      p->saved_s6 = p->trapframe->s6;
+      p->saved_s7 = p->trapframe->s7;
+      p->saved_s8 = p->trapframe->s8;
+      p->saved_s9 = p->trapframe->s9;
+      p->saved_s10 = p->trapframe->s10;
+      p->saved_s11 = p->trapframe->s11;
+      
+      p->trapframe->epc = (uint64)p->handler; //这边先进trapframe，然后考虑怎么返回
+      p->ticks=0;
+    }
     yield();
+  }
 
   usertrapret();
 }
@@ -217,4 +271,52 @@ devintr()
     return 0;
   }
 }
+
+//作业
+void switchtrapframe(struct trapframe* trapframe, struct trapframe* trapframesave){
+  trapframe-> kernel_satp = trapframesave->kernel_satp;
+  trapframe-> kernel_sp = trapframesave->kernel_sp;
+  trapframe-> epc = trapframesave->epc;
+  trapframe-> kernel_hartid = trapframesave->kernel_hartid;
+
+  trapframe->ra = trapframesave->ra;
+  trapframe->sp = trapframesave->sp;
+  trapframe->gp = trapframesave->gp;
+  trapframe->tp = trapframesave->tp;
+  trapframe->t0 = trapframesave->t0;
+  trapframe->t1 = trapframesave->t1;
+  trapframe->t2 = trapframesave->t2;
+  trapframe->t3 = trapframesave->t3;
+  trapframe->t4 = trapframesave->t4;
+  trapframe->t5 = trapframesave->t5;
+  trapframe->t6 = trapframesave->t6;
+  trapframe->a0 = trapframesave->a0;
+  trapframe->a1 = trapframesave->a1;
+  trapframe->a2 = trapframesave->a2;
+  trapframe->a3 = trapframesave->a3;
+  trapframe->a4 = trapframesave->a4;
+  trapframe->a5 = trapframesave->a5;
+  trapframe->a6 = trapframesave->a6;
+  trapframe->a7 = trapframesave->a7;
+  trapframe->s0 = trapframesave->s0;
+  trapframe->s1 = trapframesave->s1;
+  trapframe->s2 = trapframesave->s2;
+  trapframe->s3 = trapframesave->s3;
+  trapframe->s4 = trapframesave->s4;
+  trapframe->s5 = trapframesave->s5;
+  trapframe->s6 = trapframesave->s6;
+  trapframe->s7 = trapframesave->s7;
+  trapframe->s8 = trapframesave->s8;
+  trapframe->s9 = trapframesave->s9;
+  trapframe->s10 = trapframesave->s10;
+  trapframe->s11 = trapframesave->s11;
+  trapframe->t3 = trapframesave->t3;
+  trapframe->t4 = trapframesave->t4;
+  trapframe->t5 = trapframesave->t5; 
+  trapframe->t6 = trapframesave->t6;
+
+}
+
+
+
 

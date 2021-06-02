@@ -132,3 +132,36 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+
+//作业加的
+/*void backtrace(void){
+  printf("backtrace:\n");
+  uint64 fp=r_fp();
+  uint64 fpconst=fp;
+  //printf("%p %p \n", PGROUNDUP(fpconst), PGROUNDDOWN(fpconst));
+  while(1){   
+    printf("%p\n", *(uint64 *)(fp-8));
+    fp = *(uint64 *)(fp-16);
+    if (fp>=PGROUNDUP(fpconst)){
+      break;
+    }
+  }
+}*/
+
+void 
+backtrace(void)
+{
+  uint64 cur_fp = r_fp();
+  while(cur_fp != PGROUNDDOWN(cur_fp))
+  {
+    printf("%p\n", *(uint64 *)(cur_fp - 8));
+    cur_fp = *(uint64 *)(cur_fp - 16);
+  }
+}
+
+
+
+
+
+
