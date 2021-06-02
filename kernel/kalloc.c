@@ -21,13 +21,16 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
+  int freememory;  //作业
 } kmem;
 
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  kmem.freememory = 0; //作业，这句话和下面一句交换下位置就不行了？
   freerange(end, (void*)PHYSTOP);
+  
 }
 
 void
@@ -59,6 +62,7 @@ kfree(void *pa)
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
+  ++kmem.freememory;  //作业
   release(&kmem.lock);
 }
 
@@ -72,8 +76,10 @@ kalloc(void)
 
   acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
+  if(r){
     kmem.freelist = r->next;
+    --kmem.freememory;  //作业
+  }
   release(&kmem.lock);
 
   if(r)
@@ -84,12 +90,17 @@ kalloc(void)
 //计算amount of free memory
 
 int amountoffreememory(void){
-  struct run *r;
+  /*struct run *r;
   int num=0;
   for (r=kmem.freelist;r;r=r->next){
     num++;
   }
-  return num*PGSIZE;
+  return num*PGSIZE;*/
+  int len;
+  acquire(&kmem.lock);
+  len = kmem.freememory;
+  release(&kmem.lock);
+  return len*PGSIZE ;
 }
 
 
