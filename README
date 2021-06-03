@@ -45,4 +45,12 @@ riscv64-softmmu. Once they are installed, and in your shell
 search path, you can run "make qemu".
 
 以下是关于作业的一些remark：
-首先pagetable在实现的时候是一个指针pagetable_t，但并没有直接的说存储3级页表。
+首先pagetable在实现的时候是一个指针pagetable_t，但并没有直接的说存储3级页表。因为这边都是指针映射，所以也解释了为什么不能free leaf page
+satp是和root pagetable联系在一起的。
+
+结合实验分析课的一些remark：
+stack以下的部分占3个pagetable的大小。data和text是在一个page里的，这边只是为了方便，但是实际操作系统中不会这样设计。guardpage的最后是0f，其余的都是1f。这些都是flags。
+最高位的地址是trampoline之类的东西。但是为什么这个最高位的虚拟地址是255不是511？因为riscv只用了39个bit中的38个。
+
+这边需要澄清的一点是，复制的方法也是可以使用的。同时由于大部分复制的东西是可以使用的，所以只要补上没有使用的那一部分就可以了，遍历循环的时候是1到512，0所占据的1GB的内容是没有被复制的，
+所以就解释了为什么只有4条关于硬件的初始化被延续下来。补充：KERNBASE对应的最高级entry是2.
