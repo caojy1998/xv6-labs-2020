@@ -53,4 +53,12 @@ stack以下的部分占3个pagetable的大小。data和text是在一个page里�
 最高位的地址是trampoline之类的东西。但是为什么这个最高位的虚拟地址是255不是511？因为riscv只用了39个bit中的38个。
 
 这边需要澄清的一点是，复制的方法也是可以使用的。同时由于大部分复制的东西是可以使用的，所以只要补上没有使用的那一部分就可以了，遍历循环的时候是1到512，0所占据的1GB的内容是没有被复制的，
-所以就解释了为什么只有4条关于硬件的初始化被延续下来。补充：KERNBASE对应的最高级entry是2.
+所以就解释了为什么只有4条初始化被延续下来，貌似这4条涉及的是user的部分，没法直接复制。补充：KERNBASE对应的最高级entry是2.
+但同时CLINT这个量在这边也被写到kernel_pagetable当中去了，所以是否有必要去掉这个，原因？
+
+关于第3部分：
+这边还是强调不需要按页复制，因为所有的地址都已经map到kernel里了（可能是identical map）。write这个系统调用就要求从user space写大量信息到kernel。
+问题：这边一做map的话，会把kernel的isolation给break掉吗？
+PTE_U可能有点保证isolation的功能。总体而言，后面三个bit U W X的控制是为了debugging reason，确保kernel在这边只有读取user space信息的权限
+高级思考题：为什么在fork中是把新的pagetable复制给新的kernel_pagetable。是因为如果在复制之前parent process exit了，就复制不了了。这边并没有加一个lock。
+
