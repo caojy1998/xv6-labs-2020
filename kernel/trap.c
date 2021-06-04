@@ -67,7 +67,28 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  }
+   //作业
+   else if(r_scause() == 13 || r_scause() == 15){
+     uint64 temp = r_stval();
+     struct proc *p = myproc();
+     char *mem;
+     printf("page fault %p \n", temp);
+     temp = PGROUNDDOWN(temp);
+
+     mem = kalloc();
+     if(mem == 0){
+       p->killed = 1;
+     }
+     memset(mem, 0, PGSIZE);
+     if(mappages(p->pagetable, temp, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+       kfree(mem);
+       p->killed = 1;
+     }    
+   
+   }
+   //作业结束
+   else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
