@@ -273,6 +273,10 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  
+  //作业，fork真正改的地方在uvmcopy中
+  
+  
   np->sz = p->sz;
 
   np->parent = p;

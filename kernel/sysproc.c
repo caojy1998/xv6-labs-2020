@@ -41,16 +41,36 @@ sys_wait(void)
 uint64
 sys_sbrk(void)
 {
-  int addr;
+  //int addr;
   int n;
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
-  myproc()->sz += n;
+  struct proc *p=myproc();
+  uint64 addr = p->sz;
+  uint64 newsize = addr + n;
+  if (newsize > MAXVA){
+    return addr;
+  }
+  
   //if(growproc(n) < 0)
   //  return -1;
+  
+  //作业
+  if(n<0) {
+    if (newsize > addr){
+      newsize = 0;
+      uvmunmap(p->pagetable, 0, PGROUNDUP(addr)/PGSIZE, 1);
+    }
+    else{
+      uvmunmap(p->pagetable, PGROUNDUP(newsize), (PGROUNDUP(addr)-PGROUNDUP(newsize))/PGSIZE, 1);
+    }
+    
+  }
+  p->sz = newsize;
+  //作业结束
   return addr;
+  
 }
 
 uint64

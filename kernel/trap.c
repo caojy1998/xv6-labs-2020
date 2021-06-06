@@ -70,20 +70,33 @@ usertrap(void)
   }
    //作业
    else if(r_scause() == 13 || r_scause() == 15){
-     uint64 temp = r_stval();
-     struct proc *p = myproc();
+     uint64 stval = r_stval();
      char *mem;
-     printf("page fault %p \n", temp);
-     temp = PGROUNDDOWN(temp);
-
-     mem = kalloc();
-     if(mem == 0){
+     //printf("page fault %p \n", temp);
+     //temp = PGROUNDDOWN(temp);
+     //
+     if (stval >= p->sz){
        p->killed = 1;
      }
-     memset(mem, 0, PGSIZE);
-     if(mappages(p->pagetable, temp, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
-       kfree(mem);
-       p->killed = 1;
+     else{
+       uint64 protecttop = PGROUNDDOWN(p->trapframe->sp);
+       uint64 stvaltop = PGROUNDUP(stval);
+       if (protecttop != stvaltop){
+         mem = kalloc();
+         if(mem == 0){
+           p->killed = 1;
+         }
+         else{
+           memset(mem, 0, PGSIZE);
+           if(mappages(p->pagetable, PGROUNDDOWN(stval), PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+             //kfree(mem);
+             p->killed = 1;
+           }
+         }
+       }
+       else {
+         p->killed = 1;
+       }
      }    
    
    }
