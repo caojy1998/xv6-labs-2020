@@ -13,6 +13,9 @@ void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
+                   
+int reference_count[PHYSTOP >> 12];
+struct spinlock ref_cnt_lock;
 
 struct run {
   struct run *next;
@@ -27,6 +30,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  initlock(&ref_cnt_lock, "ref_cnt");
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -35,8 +39,10 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE){
+    reference_count[(uint64)p >> 12] = 1;
     kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by v,
@@ -52,14 +58,18 @@ kfree(void *pa)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
-  memset(pa, 1, PGSIZE);
+  
 
   r = (struct run*)pa;
-
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  
+  reference_count[(uint64)pa>>12]--;   //目前将改变数组的操作放在这边 
+  if (reference_count[(uint64)pa>>12] == 0){
+    memset(pa, 1, PGSIZE);
+    acquire(&kmem.lock);
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+    release(&kmem.lock);
+  }
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -72,8 +82,10 @@ kalloc(void)
 
   acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
+  if(r){
     kmem.freelist = r->next;
+    reference_count[(uint64)r>>12] = 1;
+  }
   release(&kmem.lock);
 
   if(r)

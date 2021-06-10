@@ -11,6 +11,8 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
+extern int reference_count[];
+
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -28,6 +30,32 @@ trapinithart(void)
 {
   w_stvec((uint64)kernelvec);
 }
+
+int cowhandler(pagetable_t pagetable, uint64 va)
+{
+  if (va >= MAXVA) 
+    return -1;
+  pte_t *pte;
+  pte = walk(pagetable, va, 0);
+  if (pte == 0) return -1;
+  if ((*pte & PTE_U) == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_COW) == 0)
+    return -1;
+
+  // allocate a new page
+  uint64 pa = PTE2PA(*pte); // original physical address
+  uint64 ka = (uint64) kalloc(); // newly allocated physical address
+
+  if (ka == 0){
+    return -1;
+  } 
+  memmove((char*)ka, (char*)pa, PGSIZE); // copy the old page to the new page
+  kfree((void*)pa);
+  uint flags = PTE_FLAGS(*pte);
+  *pte = PA2PTE(ka) | flags | PTE_W;
+  *pte &= ~PTE_COW;
+  return 0;
+}
+
 
 //
 // handle an interrupt, exception, or system call from user space.
@@ -65,9 +93,47 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } 
+  //作业
+  else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } 
+  
+  else if (r_scause() == 15){  //写一些注意事项，首先这个else if真的很重要，不能直接写if，不然就不是相斥情况了，一旦不是相斥情况，涉及memory操作就会报错
+    char *mem;
+    pte_t *pte;
+    uint64 va = r_stval();
+    
+    if((pte = walk(p->pagetable, va, 0)) == 0){   //先找到发生错误的va对应的pte
+      p->killed = 1;
+      exit(-1) ;
+    }
+    if ((*pte & PTE_U) == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_COW) == 0){
+      p->killed = 1;
+      exit(-1) ;       //如果直接if后面真的需要exit(-1)，不然也不是相斥情况，在这边编译的时候尽量多用exit(-1)，少用return!
+   }
+    
+    uint64 pa = PTE2PA(*pte);
+    
+    if ((mem = kalloc()) == 0){  //这边包含了+=1的意思了
+      p->killed = 1;
+      exit(-1) ;     //
+    }
+    else{
+      memmove(mem, (char*)pa, PGSIZE);
+      kfree((void*)pa); //这边包含了-=1的意思了
+      *pte = *pte | PTE_W;
+      
+      uint flags = PTE_FLAGS(*pte);
+      *pte = PA2PTE((uint64)mem) | flags;
+      *pte = *pte & ~PTE_COW;    //只有新页的COW要改，因为老的不确定还有几个指针连接着
+      
+    }
+    
+  }
+  //作业结束
+  
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
@@ -217,4 +283,6 @@ devintr()
     return 0;
   }
 }
+
+
 

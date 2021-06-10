@@ -5,11 +5,16 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
+
 
 /*
  * the kernel's page table.
  */
 pagetable_t kernel_pagetable;
+
+extern int reference_count[];  //用于统计一个地址被引用了多少次
 
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
@@ -311,22 +316,25 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  //char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+    (*pte) = (*pte) - ((*pte) & PTE_W); //改一下权限
+    (*pte) = (*pte) | PTE_COW; //改一下权限
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
+    /*if((mem = kalloc()) == 0)      这边想法是不需要新开辟整个存储，所以kalloc可以不做
       goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+    memmove(mem, (char*)pa, PGSIZE);*/
+    if(mappages(new, i, PGSIZE, pa, flags) != 0){   //这边直接将mem修改为pa，相当于连接到原来的地址
+      //kfree(mem);
       goto err;
     }
+    reference_count[pa>>12] += 1;
   }
   return 0;
 
@@ -354,13 +362,40 @@ uvmclear(pagetable_t pagetable, uint64 va)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
-  uint64 n, va0, pa0;
+  uint64 n, va0;
+  struct proc *p = myproc();
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
+    uint64 pa0 = walkaddr(pagetable, va0);    
     if(pa0 == 0)
-      return -1;
+      return -1;                  //要先确认可以walk再walk，不然就panic
+    
+    pte_t *pte;
+    pte = walk(pagetable, va0, 0);    
+    //如果原来的page不能写，那要重新allocate一个page
+    if( (*pte) & PTE_COW){
+      //uint64 pa;
+      char *mem;
+      //pa = PTE2PA(*pte);
+    
+      if ((mem = kalloc()) == 0){
+        p->killed = 1;
+      }
+      else{
+        memmove(mem, (char*)pa0, PGSIZE); //想想为什么pa要改成pa0??这个没影响walkaddr和PTE2PA干的是一件事，前者调用后者
+        uint flags = PTE_FLAGS(*pte);     //为什么这句和下面一句不能交换次序??uvmunmap会释放掉pte，改变了它的值，从而影响后面的步骤
+        uvmunmap(pagetable, va0, 1, 1);
+        
+        *pte = PA2PTE((uint64)mem) | flags;        
+        *pte = *pte | PTE_W;
+        *pte = *pte & ~PTE_COW;
+ 
+        pa0 = (uint64)mem;
+      }
+    }
+    
+    
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
