@@ -6,6 +6,7 @@
 
 static int nthread = 1;
 static int round = 0;
+pthread_mutex_t lock;            // declare a lock
 
 struct barrier {
   pthread_mutex_t barrier_mutex;
@@ -30,6 +31,19 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
+  pthread_mutex_lock(&bstate.barrier_mutex);       // acquire lock
+  bstate.nthread++;
+  //pthread_mutex_unlock(&lock);     // release lock
+  if(bstate.nthread < nthread){
+    pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+  }
+  else if(bstate.nthread == nthread){
+    //bstate.barrier_cond = 1;
+    bstate.round++;
+    pthread_cond_broadcast(&bstate.barrier_cond);
+    bstate.nthread=0;
+  }
+  pthread_mutex_unlock(&bstate.barrier_mutex);  //为什么这句unlock要放外面，放里面就出问题，放外面会出现重复执行的情况吗??
   
 }
 
@@ -43,7 +57,7 @@ thread(void *xa)
   for (i = 0; i < 20000; i++) {
     int t = bstate.round;
     assert (i == t);
-    barrier();
+    barrier();                //assert是干什么用的?
     usleep(random() % 100);
   }
 
@@ -57,6 +71,7 @@ main(int argc, char *argv[])
   void *value;
   long i;
   double t1, t0;
+  pthread_mutex_init(&lock, NULL); // initialize the lock
 
   if (argc < 2) {
     fprintf(stderr, "%s: %s nthread\n", argv[0], argv[0]);
