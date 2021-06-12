@@ -75,7 +75,7 @@ usertrap(void)
      //printf("page fault %p \n", temp);
      //temp = PGROUNDDOWN(temp);
      //
-     if (stval >= p->sz){
+     if (stval >= p->sz){  //check if address is below user stack
        p->killed = 1;
      }
      else{

@@ -428,7 +428,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
         return 0;
       }*/
       memset(mem, 0, PGSIZE);
-      mappages(pagetable, va0, PGSIZE, pa0, PTE_W|PTE_X|PTE_R|PTE_U);
+      mappages(pagetable, va0, PGSIZE, pa0, PTE_W|PTE_X|PTE_R|PTE_U);  //因为pa0在后面还有用到
       /*if(mappages(pagetable, va0, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
         kfree(mem);
         uvmdealloc(pagetable, a, oldsz);
