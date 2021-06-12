@@ -107,7 +107,8 @@ thread_create(void (*func)())
   // YOUR CODE HERE
   
   t->context.ra = (uint64)func ;
-  t->context.sp = (uint64)(&t->stack[STACK_SIZE-1]) ;
+  t->context.sp = (uint64)(&t->stack[STACK_SIZE-1]) ; //caller的寄存器都被存在stack里面了，所以只有callee的寄存器需要存储。
+                                                      //sp存储的内容是栈，寄存器存不下的内容会被暂时移动到栈中，待需要的时候再调出来，所以栈地址也是必须的
   
 }
 

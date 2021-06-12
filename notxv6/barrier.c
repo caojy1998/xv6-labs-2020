@@ -43,7 +43,7 @@ barrier()
     pthread_cond_broadcast(&bstate.barrier_cond);
     bstate.nthread=0;
   }
-  pthread_mutex_unlock(&bstate.barrier_mutex);  //为什么这句unlock要放外面，放里面就出问题，放外面会出现重复执行的情况吗??
+  pthread_mutex_unlock(&bstate.barrier_mutex);  //为什么这句unlock要放外面，放里面就出问题，放外面会出现重复执行的情况吗? pthread_cond_wait最后有一步acquire，再被唤醒以后，所以在程序最后还需要再unlock
   
 }
 
