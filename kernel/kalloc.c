@@ -92,3 +92,23 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+
+/*reference_count[(uint64)pa>>12]--;   //目前将改变数组的操作放在这边 
+1、load内存地址(mem)的数到寄存器(reg)
+2、将reg包含的数减1
+3、store，将reg中的数写回mem
+if (reference_count[(uint64)pa>>12] == 0){
+4、load mem的数到寄存器reg2
+5、比较reg2是否为0
+步骤4被优化
+偏序关系：1<2  2<3 2<5    1235 or 1253
+
+假设是1235顺序
+假设两个process A B分别由CPU A B同时执行，假设mem存储的数是2
+假设顺序A1 B1 A2 A3 A5 B2 B3 B5
+需要保证B3<A1 or A3<B1，实际中用lock来达成更强的约束B5<A1 or A5<B1
+
+line 65 之前 acquire lock，最安全的做法是在72行之后release lock
+
+__sync_synchronize();保证编译器在翻译指令的时候，不将后面的指令翻译到前面*/
