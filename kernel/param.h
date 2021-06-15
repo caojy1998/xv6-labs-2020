@@ -11,3 +11,5 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       10000  // size of file system in blocks
 #define MAXPATH      128   // maximum file path name
+
+#define NBUCKETS   13  //作业，定义buckets的数量
