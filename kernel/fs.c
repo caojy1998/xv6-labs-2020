@@ -400,6 +400,33 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
+  //作业，加一个二级的block的寻找过程
+  bn -= NINDIRECT;
+  
+  uint *a2;
+  struct buf *cp;
+  int t1 = bn /256;
+  int t2 = bn % 256;
+  if (bn < NININDIRECT){
+    if((addr = ip->addrs[NDIRECT+1]) == 0)
+      ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    if((addr = a[t1]) == 0){
+      a[t1] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    cp = bread(ip->dev, addr);
+    a2 = (uint*)cp->data;
+    if ((addr = a2[t2])== 0){
+      a2[t2] = addr = balloc(ip->dev);
+      log_write(cp);
+    }
+    
+    brelse(cp);
+    brelse(bp);
+    return addr;
+  }
 
   panic("bmap: out of range");
 }
