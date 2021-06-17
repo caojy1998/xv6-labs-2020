@@ -404,7 +404,7 @@ wait(uint64 addr)
   // hold p->lock for the whole time to avoid lost
   // wakeups from a child's exit().
   acquire(&p->lock);
-
+  //int test = 0;
   for(;;){
     // Scan through table looking for exited children.
     havekids = 0;

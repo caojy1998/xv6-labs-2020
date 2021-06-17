@@ -9,8 +9,7 @@
 #include "defs.h"
 
 #ifdef LAB_LOCK
-//#define NLOCK 500
-#define NLOCK 550             //这个550我是凑的
+#define NLOCK 500
 
 static struct spinlock *locks[NLOCK];
 struct spinlock lock_locks;

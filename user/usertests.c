@@ -1742,7 +1742,6 @@ manywrites(char *s)
       printf("fork failed\n");
       exit(1);
     }
-
     if(pid == 0){
       char name[3];
       name[0] = 'b';
@@ -1772,10 +1771,9 @@ manywrites(char *s)
       exit(0);
     }
   }
-
   for(int ci = 0; ci < nchildren; ci++){
     int st = 0;
-    wait(&st);
+    wait(&st);       //卡在了这句话
     if(st != 0)
       exit(st);
   }
@@ -2827,7 +2825,9 @@ main(int argc, char *argv[])
   int free0 = countfree();
   int free1 = 0;
   int fail = 0;
-  for (struct test *t = tests; t->s != 0; t++) {
+  struct test *t = tests;
+
+  for (; t->s != 0; t++) {
     if((justone == 0) || strcmp(t->s, justone) == 0) {
       if(!run(t->f, t->s))
         fail = 1;
