@@ -484,3 +484,108 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64 sys_mmap(void){
+  
+  uint64 addr;
+  int length;
+  int prot;
+  int flags;
+  int fd;
+  struct proc *p = myproc();
+  
+  if(argint(1, &length) < 0)
+    return -1;
+  if(argint(2, &prot) < 0)
+    return -1;
+  if(argint(3, &flags) < 0)
+    return -1;
+  if(argint(4, &fd) < 0)
+    return -1;
+  
+  //open the file
+  struct file *mapfile = p->ofile[fd];
+  if ((prot & PROT_WRITE) && (!(flags & MAP_PRIVATE)) && (!mapfile->writable))
+    return -1;
+  
+  //change the parameter for the vmas[i]
+  
+  int i = 0;
+  addr = p->sz;
+  
+  for (i = 0; i < 16; i++){
+    if (p->vmas[i].valid == 0){
+      break;
+    }
+  }
+  if (i == 16){
+    return -1;
+  }
+  p->vmas[i].addr = addr;
+  p->vmas[i].length = length;
+  p->vmas[i].prot = prot;
+  p->vmas[i].flags = flags;
+  p->vmas[i].mapfile = mapfile;
+  filedup(p->vmas[i].mapfile);
+  p->vmas[i].valid = 1;
+  //let the usertrap to allocate space for the file
+  
+  p->sz += length;
+  return addr; //
+}
+
+
+uint64 sys_munmap(void){
+  //load in the parameters we need
+  int length;
+  uint64 addr;
+  struct proc *p = myproc();
+  if(argaddr(0, &addr) < 0)
+    return -1;
+  if(argint(1, &length) < 0)
+    return -1;
+  
+  //use the information we have to do unmapping, first we need to find the vmas[i];
+  
+  int i =0 ;
+  for(i = 0; i < 16 ;i++){
+    if (p->vmas[i].valid == 1){
+      if ( p->vmas[i].addr <= addr && addr < (p->vmas[i].addr + p->vmas[i].length)){
+        break;
+      }
+    }
+  }
+  if (i == 16){
+    return -1;
+  }  
+  
+  // if MAP_SHARED, write back to the file
+  
+  if (p->vmas[i].flags & MAP_SHARED)
+    filewrite(p->vmas[i].mapfile, addr, p->vmas[i].length);
+    
+  //uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+  
+  //fileclose(p->vmas[i].mapfile);
+  if (p->vmas[i].addr == addr && p->vmas[i].length == length){
+    uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+    fileclose(p->vmas[i].mapfile);
+    p->vmas[i].valid = 0;
+  }
+  else if (p->vmas[i].addr == addr){
+    uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+    p->vmas[i].addr += length;
+    p->vmas[i].length -= length;
+  }
+  else if (p->vmas[i].addr + p->vmas[i].length == addr + length){
+    uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+    p->vmas[i].length -= length;
+  }
+
+  return 0; 
+}
+
+
+
+
+

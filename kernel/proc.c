@@ -3,8 +3,13 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
+#include "fs.h"
+#include "file.h"
+
 
 struct cpu cpus[NCPU];
 
@@ -280,6 +285,15 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  //作业
+  
+  for (int j = 0; j < 16; j++){
+    if(p->vmas[j].valid == 1){ 
+      np->vmas[j] = p->vmas[j];
+      filedup(np->vmas[j].mapfile);
+    }
+  }
+  
   np->sz = p->sz;
 
   np->parent = p;
@@ -343,7 +357,18 @@ exit(int status)
 
   if(p == initproc)
     panic("init exiting");
-
+  //作业
+  
+  for (int j = 0; j < 16; j++){
+    if (p->vmas[j].valid == 1){
+      if (p->vmas[j].flags & MAP_SHARED){
+        filewrite(p->vmas[j].mapfile, p->vmas[j].addr, p->vmas[j].length);
+      } 
+      uvmunmap(p->pagetable, p->vmas[j].addr, p->vmas[j].length/PGSIZE, 1);
+    }
+    p->vmas[j].valid = 0;
+  }
+  
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){

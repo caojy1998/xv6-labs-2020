@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
+#include "fcntl.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -65,7 +69,53 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  }
+  //作业
+  else if (r_scause() == 13 || r_scause() == 15){
+    int i = 0;
+    uint64 va = r_stval();
+    //first we get the virtual address
+    //next we need to use what we have stored in the process ----- the vmas[i]
+    if (va >= p->sz || va < p->trapframe->sp){
+      p->killed = 1;
+    }
+    else{
+      
+      for(i = 0; i < 16 ; i++){
+        if (p->vmas[i].valid == 1){
+          if (p->vmas[i].addr <= va && (p->vmas[i].addr + p->vmas[i].length) > va)
+            break;
+        }
+      }
+      if (i == 16){
+        p->killed = 1;
+      }
+      else{
+        uint64 ka = (uint64)kalloc();
+        if (ka == 0){
+          p->killed = 1;
+        }
+        else{
+          memset((void*)ka, 0 ,PGSIZE);
+          va = PGROUNDDOWN(va);
+          ilock(p->vmas[i].mapfile->ip);
+          readi(p->vmas[i].mapfile->ip, 0, ka, va - p->vmas[i].addr, PGSIZE);
+          iunlock(p->vmas[i].mapfile->ip);
+          uint64 pm = PTE_U;
+          if (p->vmas[i].prot & PROT_READ)
+            pm |= PTE_R;
+          if (p->vmas[i].prot & PROT_WRITE)
+            pm |= PTE_W;
+          if(mappages(p->pagetable, va, PGSIZE, ka, pm) != 0) {
+            kfree((void *)ka);
+            p->killed = 1;
+          }
+        }
+      }
+    }
+  }    
+  //作业
+   else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
