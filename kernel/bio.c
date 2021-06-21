@@ -98,7 +98,7 @@ bget(uint dev, uint blockno)                     //连接工作是一个双向�
   }
   
   int nh=(h+1)%NBUCKETS; // nh表示下一个要探索的bucket，当它重新变成h，说明所有的buffer都busy（refcnt不为0），此时panic
-  while(nh!=h){
+  while(nh!=h){          //lock lab bio.c 100行：应当从h本身开始遍历寻找空的block 101行，考虑do while循环
     acquire(&bcache.lock[nh]);// 获取当前bucket的锁
     for(b = bcache.hashbucket[nh].prev; b != &bcache.hashbucket[nh]; b = b->prev){
       if(b->refcnt == 0) {
