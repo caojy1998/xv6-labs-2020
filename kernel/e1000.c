@@ -116,7 +116,9 @@ e1000_transmit(struct mbuf *m)
   tx_mbufs[num] = m;
   tx_ring[num].addr = (uint64) tx_mbufs[num]->head;
   tx_ring[num].length = (uint64) tx_mbufs[num]->len; 
-  tx_ring[num].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;   
+  tx_ring[num].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP; 
+  
+  __sync_synchronize();  
   
   regs[E1000_TDT] = (num + 1) % TX_RING_SIZE;
   release(&e1000_lock);
@@ -136,8 +138,13 @@ e1000_recv(void)
  
   int num = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
   
-  while((rx_ring[num].status & 1) == E1000_RXD_STAT_DD){     //和tx_ring[num].status & E1000_TXD_STAT_DD有什么不同?
+  //while((rx_ring[num].status & 1) == E1000_RXD_STAT_DD){     //和(uint64)tx_ring[num].status & E1000_TXD_STAT_DD有什么不同?
+  //while((uint64)tx_ring[num].status & E1000_TXD_STAT_DD){
+  while(rx_ring[num].status & 1){
     rx_mbufs[num]->len = rx_ring[num].length;
+    if (rx_mbufs[num]->len > MBUF_SIZE){
+      panic("e1000 len");
+    }
     net_rx(rx_mbufs[num]);
     rx_mbufs[num] = mbufalloc(0);
     rx_ring[num].addr = (uint64) rx_mbufs[num]->head;
