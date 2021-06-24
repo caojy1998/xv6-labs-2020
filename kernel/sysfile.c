@@ -572,13 +572,19 @@ uint64 sys_munmap(void){
     fileclose(p->vmas[i].mapfile);
     p->vmas[i].valid = 0;
   }
-  else if (p->vmas[i].addr == addr){
+  /*else if (p->vmas[i].addr == addr){
     uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
     p->vmas[i].addr += length;
     p->vmas[i].length -= length;
   }
   else if (p->vmas[i].addr + p->vmas[i].length == addr + length){
     uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+    p->vmas[i].length -= length;
+    p->vmas[i].addr += length;
+  }*/
+  else{
+    uvmunmap(p->pagetable, addr, length/PGSIZE, 0);
+    p->vmas[i].addr += length;
     p->vmas[i].length -= length;
   }
 
