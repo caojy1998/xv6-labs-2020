@@ -224,6 +224,8 @@ dns()
 int
 main(int argc, char *argv[])
 {
+  for (int j = 0; j<1000;j++){
+  printf("loop:%d\n", j);
   int i, ret;
   uint16 dport = NET_TESTS_PORT;
 
@@ -260,5 +262,6 @@ main(int argc, char *argv[])
   printf("DNS OK\n");
   
   printf("all tests passed.\n");
+  }
   exit(0);
 }
