@@ -105,22 +105,22 @@ e1000_transmit(struct mbuf *m)
   //在regs中寻找TDT   
   
   acquire(&e1000_lock);
-  uint32 index = regs[E1000_TDT] % TX_RING_SIZE;     //变量赋值换到acquire里面    变量名一定要设成一样?
-  if ((tx_ring[index].status & E1000_TXD_STAT_DD) == 0){
+  uint32 num = regs[E1000_TDT] % TX_RING_SIZE;     //变量赋值换到acquire里面    变量名一定要设成一样?
+  if ((tx_ring[num].status & E1000_TXD_STAT_DD) == 0){
     release(&e1000_lock);
     return -1; //错误
   }
-  if (tx_mbufs[index]){
-    mbuffree(tx_mbufs[index]);
+  if (tx_mbufs[num]){
+    mbuffree(tx_mbufs[num]);
   }
-  tx_mbufs[index] = m;
-  tx_ring[index].addr = (uint64) tx_mbufs[index]->head;
-  tx_ring[index].length = (uint64) tx_mbufs[index]->len; 
-  tx_ring[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP; 
+  tx_mbufs[num] = m;
+  tx_ring[num].addr = (uint64) tx_mbufs[num]->head;
+  tx_ring[num].length = (uint64) tx_mbufs[num]->len; 
+  tx_ring[num].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP; 
   
-  //__sync_synchronize();  
+  //__sync_synchronize();  这句话不去掉是有影响的
   
-  regs[E1000_TDT] = (index + 1) % TX_RING_SIZE;
+  regs[E1000_TDT] = (num + 1) % TX_RING_SIZE;
   release(&e1000_lock);
   return 0;   
 }
